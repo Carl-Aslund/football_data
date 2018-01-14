@@ -21,9 +21,9 @@ def readMatchData(season):
     seasonFile = open('match_data/'+season+'.csv')
     seasonReader = csv.reader(seasonFile)
     seasonData = list(seasonReader)
-    #print(seasonData[0][1]) #[Row][Col]
     for i in range(1,381):
         # Gets all the data from rows 1-380
+        # Only works for a 380-game season
         homeTeam = seasonData[i][2]
         awayTeam = seasonData[i][3]
         matchup = (homeTeam, awayTeam)
@@ -36,5 +36,24 @@ def readMatchData(season):
         matchDict[matchup] = {'date':convertDate(seasonData[i][1]), 'homeGoals':int(seasonData[i][4]), 'awayGoals':int(seasonData[i][5]), 'resultChar':seasonData[i][6]}
     return matchDict, teamDict
 
+def getTeamPosition(season, teamName):
+    """Creates a Position object for a team in a 38-game season."""
+    matchDict, teamDict = readMatchData(season)
+    teamPosition = Position(38, teamDict[teamName], matchDict)
+    print(teamPosition)
 
-readMatchData('1617')
+def getTable(season, gamesPlayed):
+    """Creates a table of team positions after all teams have played some number of games."""
+    matchDict, teamDict = readMatchData(season)
+    positionDict = {}
+    for team in teamDict.values():
+        positionDict[team] = Position(gamesPlayed, team, matchDict)
+    for team in sorted(positionDict, key=positionDict.get, reverse=True):
+        print(team)
+
+print("0 games in:")
+getTable('1617', 0)
+print("\n19 games in:")
+getTable('1617', 19)
+print("\n38 games in:")
+getTable('1617', 38)
