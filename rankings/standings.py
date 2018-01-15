@@ -51,9 +51,53 @@ def getTable(season, gamesPlayed):
     for team in sorted(positionDict, key=positionDict.get, reverse=True):
         print(team)
 
-print("0 games in:")
-getTable('1617', 0)
-print("\n19 games in:")
-getTable('1617', 19)
-print("\n38 games in:")
-getTable('1617', 38)
+def classifyGame(selfScore, otherScore):
+    """Calculate the value of a result from 0 (utter loss) to 1 (complete win)"""
+    if otherScore == 0:
+        if selfScore == 0:
+            return 0.5 # Goalless draw
+        else:
+            return 1. # Win + Clean Sheet
+    else:
+        return selfScore/(selfScore+otherScore)
+
+def matrixTable(season, gamesPlayed):
+    """Uses the Mattingly method to rank teams in a partial season."""
+    matchDict, teamDict = readMatchData(season)
+    teamNames = list(sorted(teamDict.keys()))
+    indexDict = {}
+    for i in range(len(teamNames)):
+        indexDict[teamNames[i]] = i
+    A = np.array([[0.]*len(teamNames)]*len(teamNames))
+    # A[1][0] = 5       Goes by A[row][col]
+    unvisitedA = np.array([[True]*len(teamNames)]*len(teamNames))
+    # When assessing a game, let p be the value of the win in the range (0.5, 1.0) based on the dominance of the win.
+    # For each game, let i be the index of the winning team, and let j be the index of the losing team. Let aji = p and let aij = 1-p.
+    for teamName in teamNames:
+        team = teamDict[teamName]
+        i = indexDict[teamName]
+        fixtures = team.fixtureList
+        for index in range(gamesPlayed):
+            fixture = fixtures[index]
+            matchup = fixture.getMatchup(teamName)
+            matchData = matchDict[matchup]
+            if fixture.atHome:
+                p = classifyGame(matchData['homeGoals'],matchData['awayGoals'])
+            else:
+                p = classifyGame(matchData['awayGoals'],matchData['homeGoals'])
+            j = indexDict[fixture.opponent]
+            if unvisitedA[j][i]:
+                A[j][i] = p
+                unvisitedA[j][i] = False
+            else:
+                A[j][i] = (A[j][i] + p)/2
+    # For each aii, let aii = (numGames) - sumj≠i(aij)
+    for i in range(len(teamNames)):
+        A[i][i] = gamesPlayed - sum(A[i])
+    # A /= gamesPlayed
+    # Rank teams by steady state vector (eigenvector associated with an eigenvalue of 1)
+    w,v = la.eig(A) # Eigenvectors do not seem accurate
+    print(w)
+
+
+matrixTable('1617', 38)
